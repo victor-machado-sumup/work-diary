@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MonacoEditor } from '@/components/monaco-editor';
+import { ActivitySidebar } from '@/components/activity-sidebar';
 
 function App() {
   const [content, setContent] = useState('');
@@ -16,11 +17,14 @@ function App() {
 
   return (
     <div className="flex h-full flex-col gap-2 p-2">
-      <MonacoEditor
-        className="min-h-0 flex-1 overflow-hidden rounded-md border"
-        value={content}
-        onChange={setContent}
-      />
+      <div className="flex min-h-0 flex-1 gap-2">
+        <MonacoEditor
+          className="min-h-0 flex-1 overflow-hidden rounded-md border"
+          value={content}
+          onChange={setContent}
+        />
+        <ActivitySidebar className="w-72 shrink-0 overflow-y-auto" />
+      </div>
       <div className="flex justify-end">
         <Button onClick={() => setOpen(true)}>Save</Button>
       </div>

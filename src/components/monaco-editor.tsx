@@ -45,14 +45,48 @@ export function MonacoEditor({
       wordWrap: 'on',
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
+      // Built-in drop inserts text as a snippet and leaves a literal "$0".
+      dropIntoEditor: { enabled: false },
     });
     editorRef.current = editor;
+
+    const container = containerRef.current!;
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const onDrop = (e: DragEvent) => {
+      const text = e.dataTransfer?.getData('text/plain');
+      if (!text) return;
+      e.preventDefault();
+      const position =
+        editor.getTargetAtClientPoint(e.clientX, e.clientY)?.position ??
+        editor.getPosition();
+      if (!position) return;
+      editor.executeEdits('drop', [
+        {
+          range: new monaco.Range(
+            position.lineNumber,
+            position.column,
+            position.lineNumber,
+            position.column,
+          ),
+          text,
+          forceMoveMarkers: true,
+        },
+      ]);
+      editor.focus();
+    };
+    container.addEventListener('dragover', onDragOver);
+    container.addEventListener('drop', onDrop);
 
     const subscription = editor.onDidChangeModelContent(() => {
       onChangeRef.current(editor.getValue());
     });
 
     return () => {
+      container.removeEventListener('dragover', onDragOver);
+      container.removeEventListener('drop', onDrop);
       subscription.dispose();
       editor.getModel()?.dispose();
       editor.dispose();
