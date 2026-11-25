@@ -13,14 +13,15 @@ self.MonacoEnvironment = {
 };
 
 interface MonacoEditorProps {
-  value: string;
+  /** Initial content only. Later changes are ignored (the editor owns its text). */
+  defaultValue?: string;
   onChange: (value: string) => void;
   language?: string;
   className?: string;
 }
 
 export function MonacoEditor({
-  value,
+  defaultValue = '',
   onChange,
   language = 'markdown',
   className,
@@ -32,7 +33,7 @@ export function MonacoEditor({
 
   useEffect(() => {
     const editor = monaco.editor.create(containerRef.current!, {
-      value,
+      value: defaultValue,
       language,
       theme: 'vs-dark',
       quickSuggestions: false,
@@ -51,11 +52,38 @@ export function MonacoEditor({
     editorRef.current = editor;
 
     const container = containerRef.current!;
+    // Dotted drop indicator, reusing Monaco's own "dnd-target" style.
+    const dropIndicator = editor.createDecorationsCollection();
     const onDragOver = (e: DragEvent) => {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      const position = editor.getTargetAtClientPoint(
+        e.clientX,
+        e.clientY,
+      )?.position;
+      if (position) {
+        dropIndicator.set([
+          {
+            range: new monaco.Range(
+              position.lineNumber,
+              position.column,
+              position.lineNumber,
+              position.column,
+            ),
+            options: { className: 'dnd-target' },
+          },
+        ]);
+      }
+    };
+    const onDragLeave = (e: DragEvent) => {
+      // dragleave also fires when moving between child elements; only clear
+      // when the pointer actually leaves the editor.
+      if (!container.contains(e.relatedTarget as Node | null)) {
+        dropIndicator.clear();
+      }
     };
     const onDrop = (e: DragEvent) => {
+      dropIndicator.clear();
       const text = e.dataTransfer?.getData('text/plain');
       if (!text) return;
       e.preventDefault();
@@ -63,21 +91,37 @@ export function MonacoEditor({
         editor.getTargetAtClientPoint(e.clientX, e.clientY)?.position ??
         editor.getPosition();
       if (!position) return;
-      editor.executeEdits('drop', [
-        {
-          range: new monaco.Range(
-            position.lineNumber,
-            position.column,
-            position.lineNumber,
-            position.column,
-          ),
-          text,
-          forceMoveMarkers: true,
+      editor.executeEdits(
+        'drop',
+        [
+          {
+            range: new monaco.Range(
+              position.lineNumber,
+              position.column,
+              position.lineNumber,
+              position.column,
+            ),
+            text,
+            forceMoveMarkers: true,
+          },
+        ],
+        // The inverse edit's range covers the inserted text; put the cursor at its end.
+        (inverseEdits) => {
+          const { endLineNumber, endColumn } = inverseEdits[0].range;
+          return [
+            new monaco.Selection(
+              endLineNumber,
+              endColumn,
+              endLineNumber,
+              endColumn,
+            ),
+          ];
         },
-      ]);
+      );
       editor.focus();
     };
     container.addEventListener('dragover', onDragOver);
+    container.addEventListener('dragleave', onDragLeave);
     container.addEventListener('drop', onDrop);
 
     const subscription = editor.onDidChangeModelContent(() => {
@@ -86,6 +130,7 @@ export function MonacoEditor({
 
     return () => {
       container.removeEventListener('dragover', onDragOver);
+      container.removeEventListener('dragleave', onDragLeave);
       container.removeEventListener('drop', onDrop);
       subscription.dispose();
       editor.getModel()?.dispose();
@@ -94,14 +139,6 @@ export function MonacoEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
-
-  // Sync external value changes into the editor.
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (editor && editor.getValue() !== value) {
-      editor.setValue(value);
-    }
-  }, [value]);
 
   return <div ref={containerRef} className={className} />;
 }

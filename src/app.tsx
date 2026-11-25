@@ -20,7 +20,6 @@ function App() {
       <div className="flex min-h-0 flex-1 gap-2">
         <MonacoEditor
           className="min-h-0 flex-1 overflow-hidden rounded-md border"
-          value={content}
           onChange={setContent}
         />
         <ActivitySidebar className="w-72 shrink-0 overflow-y-auto" />
