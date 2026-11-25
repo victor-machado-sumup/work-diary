@@ -1,10 +1,13 @@
 import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
+import { join } from 'node:path';
 import started from 'electron-squirrel-startup';
 
 import * as copilot from './main/copilot';
 import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
 import * as notes from './main/notes';
+import * as secrets from './main/secrets';
+import * as settings from './main/settings';
 import * as slack from './main/slack';
 import * as vscode from './main/vscode';
 
@@ -16,11 +19,19 @@ if (started) {
   app.quit();
 }
 
-// Set WORK_DIARY_SHOW_ON_TOP=false to disable the always-on-top behavior (default: true).
-const showOnTop =
-  process.env.WORK_DIARY_SHOW_ON_TOP?.trim().toLowerCase() !== 'false';
+// Stay above all other windows (including fullscreen apps on macOS), or not.
+const applyAlwaysOnTop = (win: BrowserWindow, onTop: boolean): void => {
+  if (onTop) {
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  } else {
+    win.setAlwaysOnTop(false);
+    win.setVisibleOnAllWorkspaces(false);
+  }
+};
 
 const createWindow = (): void => {
+  const showOnTop = settings.getShowOnTop();
   // Create the browser window.
   const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
   const mainWindow = new BrowserWindow({
@@ -37,11 +48,7 @@ const createWindow = (): void => {
     },
   });
 
-  if (showOnTop) {
-    // Stay above all other windows (including fullscreen apps on macOS).
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
-    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  }
+  applyAlwaysOnTop(mainWindow, showOnTop);
 
   // Open links (e.g. from the markdown preview) in the system browser.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -68,6 +75,10 @@ const createWindow = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // In dev the app runs inside the stock Electron bundle, so set the dock icon manually.
+  if (!app.isPackaged && process.platform === 'darwin') {
+    app.dock?.setIcon(join(app.getAppPath(), 'assets', 'icon.png'));
+  }
   ipcMain.handle('github:getTodayActivity', () => github.getTodayActivity());
   // TODO: Slack disabled until IT grants the token scopes. Restore by returning slack.getTodayActivity().
   ipcMain.handle('slack:getTodayActivity', () =>
@@ -96,6 +107,16 @@ app.whenReady().then(() => {
   ipcMain.handle('notes:save', (_event, content: string) =>
     notes.saveNotes(content),
   );
+  ipcMain.handle('secrets:getStatus', () => secrets.getStatus());
+  ipcMain.handle('secrets:set', (_event, values) => secrets.setSecrets(values));
+  ipcMain.handle('settings:get', () => settings.getSettings());
+  ipcMain.handle('settings:set', (_event, values) => {
+    settings.setSettings(values);
+    // Always-on-top applies live; the other settings are read on use.
+    for (const win of BrowserWindow.getAllWindows()) {
+      applyAlwaysOnTop(win, settings.getShowOnTop());
+    }
+  });
   ipcMain.handle('app:quit', () => app.quit());
 
   createWindow();

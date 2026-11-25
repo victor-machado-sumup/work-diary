@@ -2,6 +2,8 @@ import { app, safeStorage, shell, type WebContents } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { getSetting } from './settings';
+
 // VS Code's GitHub Copilot OAuth app (public client id, device flow).
 const CLIENT_ID = 'Iv1.b507a08c87ecfe98';
 const DEVICE_CODE_URL = 'https://github.com/login/device/code';
@@ -18,8 +20,7 @@ const HEADERS = {
   'Copilot-Integration-Id': 'vscode-chat',
 };
 
-// Override with WORK_DIARY_COPILOT_MODEL.
-const model = () => process.env.WORK_DIARY_COPILOT_MODEL?.trim() || 'gpt-4.1';
+const model = () => getSetting('WORK_DIARY_COPILOT_MODEL');
 
 const tokenFile = () => path.join(app.getPath('userData'), 'copilot-token.bin');
 

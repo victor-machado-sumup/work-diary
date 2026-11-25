@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 # Electron-Forge
 out/
 .webpack
+
+# macOS
+.DS_Store

@@ -82,6 +82,38 @@ export interface CopilotApi {
   onDeviceCode: (callback: (info: CopilotDeviceCode) => void) => () => void;
 }
 
+export type SecretKey =
+  | 'WORK_DIARY_GOOGLE_CLIENT_ID'
+  | 'WORK_DIARY_GOOGLE_CLIENT_SECRET'
+  | 'WORK_DIARY_GITHUB_TOKEN'
+  | 'WORK_DIARY_SLACK_TOKEN';
+
+/** Where each secret currently comes from. Values are never sent to the renderer. */
+export type SecretsStatus = Record<SecretKey, 'env' | 'saved' | 'missing'>;
+
+export interface SecretsApi {
+  getStatus: () => Promise<SecretsStatus>;
+  /** Non-empty values are saved; an empty string clears the saved value. */
+  set: (values: Partial<Record<SecretKey, string>>) => Promise<void>;
+}
+
+export type SettingKey =
+  | 'WORK_DIARY_COPILOT_MODEL'
+  | 'WORK_DIARY_SHOW_ON_TOP'
+  | 'WORK_DIARY_SLACK_LOOKBACK_DAYS';
+
+/** Effective value of each setting and where it comes from. */
+export type SettingsState = Record<
+  SettingKey,
+  { value: string; source: 'env' | 'saved' | 'default' }
+>;
+
+export interface SettingsApi {
+  get: () => Promise<SettingsState>;
+  /** Non-empty values are saved; an empty string reverts to the default. */
+  set: (values: Partial<Record<SettingKey, string>>) => Promise<void>;
+}
+
 export interface NotesApi {
   /** Saves the notes to ~/.config/work-diary/YYYY-MM-DD.md; returns the path. */
   save: (content: string) => Promise<string>;
@@ -96,5 +128,7 @@ declare global {
     github: GithubApi;
     slack: SlackApi;
     notes: NotesApi;
+    secrets: SecretsApi;
+    settings: SettingsApi;
   }
 }

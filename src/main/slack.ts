@@ -1,10 +1,12 @@
 import type { SlackActivity } from '../shared/types';
+import { getSecret } from './secrets';
+import { getSetting } from './settings';
 import { getTodayRange } from './today';
 
 const API = 'https://slack.com/api';
 // How far back to look for threads I started that may have received replies today.
-const LOOKBACK_DAYS =
-  Number(process.env.WORK_DIARY_SLACK_LOOKBACK_DAYS?.trim()) || 7;
+const lookbackDays = () =>
+  Number(getSetting('WORK_DIARY_SLACK_LOOKBACK_DAYS')) || 7;
 // Messages shown before the first message sent today in a thread, for context.
 const THREAD_CONTEXT_MESSAGES = 4;
 const MAX_SEARCH_PAGES = 10;
@@ -39,9 +41,11 @@ async function call<T>(
   params: Record<string, string | number | undefined> = {},
   retry = true,
 ): Promise<T> {
-  const token = process.env.WORK_DIARY_SLACK_TOKEN?.trim();
+  const token = await getSecret('WORK_DIARY_SLACK_TOKEN');
   if (!token) {
-    throw new Error('Missing WORK_DIARY_SLACK_TOKEN environment variable.');
+    throw new Error(
+      'Missing Slack token. Set WORK_DIARY_SLACK_TOKEN or add it in Settings.',
+    );
   }
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -188,7 +192,7 @@ export async function getTodayActivity(): Promise<SlackActivity[]> {
 
   // All my messages within the lookback window (search is day-granular).
   const lookbackStart = new Date(start);
-  lookbackStart.setDate(lookbackStart.getDate() - LOOKBACK_DAYS);
+  lookbackStart.setDate(lookbackStart.getDate() - lookbackDays());
   const after = new Date(lookbackStart);
   after.setDate(after.getDate() - 1);
   const mine: SearchMatch[] = [];

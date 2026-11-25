@@ -17,6 +17,10 @@ import {
 } from '@/components/monaco-editor';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import {
+  SettingsDialog,
+  hasMissingRequiredSecrets,
+} from '@/components/settings-dialog';
+import {
   ActivitySidebar,
   buildActivityContext,
   useActivitySources,
@@ -38,6 +42,14 @@ function App() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [deviceCode, setDeviceCode] = useState<CopilotDeviceCode | null>(null);
   const started = useRef(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // First run: ask for missing credentials right away.
+  useEffect(() => {
+    void hasMissingRequiredSecrets().then((missing) => {
+      if (missing) setSettingsOpen(true);
+    });
+  }, []);
 
   const generate = useCallback(async (context: string) => {
     setAi('generating');
@@ -166,6 +178,9 @@ function App() {
           sources={sources}
         />
         <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setSettingsOpen(true)}>
+            Settings
+          </Button>
           <Button variant="outline" onClick={togglePreview}>
             {preview ? 'Edit' : 'Preview'}
           </Button>
@@ -173,6 +188,30 @@ function App() {
         </div>
       </div>
 
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        onSaved={(secrets, settings) => {
+          const changed = new Set<string>([...secrets, ...settings]);
+          const touched = (...keys: string[]) =>
+            keys.some((k) => changed.has(k));
+          // Refetch only the sources whose credentials or options changed.
+          if (
+            touched(
+              'WORK_DIARY_GOOGLE_CLIENT_ID',
+              'WORK_DIARY_GOOGLE_CLIENT_SECRET',
+            )
+          ) {
+            void sources.calendar.load();
+          }
+          if (touched('WORK_DIARY_GITHUB_TOKEN')) void sources.github.load();
+          if (
+            touched('WORK_DIARY_SLACK_TOKEN', 'WORK_DIARY_SLACK_LOOKBACK_DAYS')
+          ) {
+            void sources.slack.load();
+          }
+        }}
+      />
       <Dialog
         open={savedPath !== null}
         onOpenChange={(o) => !o && setSavedPath(null)}

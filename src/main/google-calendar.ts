@@ -5,6 +5,7 @@ import http from 'node:http';
 import path from 'node:path';
 
 import type { CalendarEvent } from '../shared/types';
+import { getSecret } from './secrets';
 import { getTodayRange } from './today';
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -21,12 +22,12 @@ interface StoredTokens {
 
 const tokenFile = () => path.join(app.getPath('userData'), 'google-token.bin');
 
-function getCredentials() {
-  const clientId = process.env.WORK_DIARY_GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = process.env.WORK_DIARY_GOOGLE_CLIENT_SECRET?.trim();
+async function getCredentials() {
+  const clientId = await getSecret('WORK_DIARY_GOOGLE_CLIENT_ID');
+  const clientSecret = await getSecret('WORK_DIARY_GOOGLE_CLIENT_SECRET');
   if (!clientId || !clientSecret) {
     throw new Error(
-      'Missing WORK_DIARY_GOOGLE_CLIENT_ID / WORK_DIARY_GOOGLE_CLIENT_SECRET environment variables.',
+      'Missing Google client ID / secret. Set WORK_DIARY_GOOGLE_CLIENT_ID / WORK_DIARY_GOOGLE_CLIENT_SECRET or add them in Settings.',
     );
   }
   return { clientId, clientSecret };
@@ -80,7 +81,7 @@ async function postToken(params: Record<string, string>) {
 
 /** Opens the system browser for consent (loopback redirect + PKCE). */
 export async function connect(): Promise<void> {
-  const { clientId, clientSecret } = getCredentials();
+  const { clientId, clientSecret } = await getCredentials();
   const verifier = randomBytes(32).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
   const state = randomBytes(16).toString('hex');
@@ -161,7 +162,7 @@ async function getAccessToken(): Promise<string> {
   ) {
     return tokens.accessToken;
   }
-  const { clientId, clientSecret } = getCredentials();
+  const { clientId, clientSecret } = await getCredentials();
   const tok = await postToken({
     client_id: clientId,
     client_secret: clientSecret,

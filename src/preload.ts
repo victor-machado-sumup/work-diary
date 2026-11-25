@@ -8,6 +8,8 @@ import type {
   CopilotDeviceCode,
   GithubApi,
   NotesApi,
+  SecretsApi,
+  SettingsApi,
   SlackApi,
   VscodeApi,
 } from './shared/types';
@@ -50,6 +52,18 @@ const copilot: CopilotApi = {
   },
 };
 contextBridge.exposeInMainWorld('copilot', copilot);
+
+const secrets: SecretsApi = {
+  getStatus: () => ipcRenderer.invoke('secrets:getStatus'),
+  set: (values) => ipcRenderer.invoke('secrets:set', values),
+};
+contextBridge.exposeInMainWorld('secrets', secrets);
+
+const settings: SettingsApi = {
+  get: () => ipcRenderer.invoke('settings:get'),
+  set: (values) => ipcRenderer.invoke('settings:set', values),
+};
+contextBridge.exposeInMainWorld('settings', settings);
 
 const notes: NotesApi = {
   save: (content) => ipcRenderer.invoke('notes:save', content),

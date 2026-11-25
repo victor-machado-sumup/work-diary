@@ -1,4 +1,5 @@
 import type { GithubActivity } from '../shared/types';
+import { getSecret } from './secrets';
 import { getTodayRange } from './today';
 
 const GRAPHQL_URL = 'https://api.github.com/graphql';
@@ -101,9 +102,11 @@ interface PullRequestNode {
  * - one entry per PR I commented on / reviewed today
  */
 export async function getTodayActivity(): Promise<GithubActivity[]> {
-  const token = process.env.WORK_DIARY_GITHUB_TOKEN?.trim();
+  const token = await getSecret('WORK_DIARY_GITHUB_TOKEN');
   if (!token) {
-    throw new Error('Missing WORK_DIARY_GITHUB_TOKEN environment variable.');
+    throw new Error(
+      'Missing GitHub token. Set WORK_DIARY_GITHUB_TOKEN or add it in Settings.',
+    );
   }
 
   const { start, end } = getTodayRange();

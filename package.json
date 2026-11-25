@@ -1,6 +1,6 @@
 {
   "name": "tmp-app",
-  "productName": "tmp-app",
+  "productName": "Work Diary",
   "version": "1.0.0",
   "private": true,
   "description": "My Electron application description",
