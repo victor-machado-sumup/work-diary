@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import started from 'electron-squirrel-startup';
 
+import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -59,6 +60,7 @@ const createWindow = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  ipcMain.handle('github:getTodayActivity', () => github.getTodayActivity());
   ipcMain.handle('calendar:isConnected', () => googleCalendar.isConnected());
   ipcMain.handle('calendar:connect', () => googleCalendar.connect());
   ipcMain.handle('calendar:disconnect', () => googleCalendar.disconnect());

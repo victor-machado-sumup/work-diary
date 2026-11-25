@@ -5,6 +5,7 @@ import http from 'node:http';
 import path from 'node:path';
 
 import type { CalendarEvent } from '../shared/types';
+import { getTodayRange } from './today';
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -185,10 +186,7 @@ interface GoogleEvent {
 
 export async function getTodayEvents(): Promise<CalendarEvent[]> {
   const accessToken = await getAccessToken();
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const { start, end } = getTodayRange();
 
   const url = new URL(EVENTS_URL);
   url.search = new URLSearchParams({
