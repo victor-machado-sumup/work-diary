@@ -30,9 +30,25 @@ export interface GithubApi {
   getTodayActivity: () => Promise<GithubActivity[]>;
 }
 
+export interface SlackActivity {
+  id: string;
+  kind: 'thread' | 'dm';
+  /** ISO date-time. */
+  time: string;
+  summary: string;
+  url: string;
+  /** Messages in sequence, as markdown. */
+  content?: string;
+}
+
+export interface SlackApi {
+  getTodayActivity: () => Promise<SlackActivity[]>;
+}
+
 declare global {
   interface Window {
     calendar: CalendarApi;
     github: GithubApi;
+    slack: SlackApi;
   }
 }

@@ -3,6 +3,7 @@ import started from 'electron-squirrel-startup';
 
 import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
+import * as slack from './main/slack';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -13,7 +14,8 @@ if (started) {
 }
 
 // Set WORK_DIARY_SHOW_ON_TOP=false to disable the always-on-top behavior (default: true).
-const showOnTop = process.env.WORK_DIARY_SHOW_ON_TOP?.trim().toLowerCase() !== 'false';
+const showOnTop =
+  process.env.WORK_DIARY_SHOW_ON_TOP?.trim().toLowerCase() !== 'false';
 
 const createWindow = (): void => {
   // Create the browser window.
@@ -61,6 +63,10 @@ const createWindow = (): void => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   ipcMain.handle('github:getTodayActivity', () => github.getTodayActivity());
+  // TODO: Slack disabled until IT grants the token scopes. Restore by returning slack.getTodayActivity().
+  ipcMain.handle('slack:getTodayActivity', () =>
+    false ? slack.getTodayActivity() : [],
+  );
   ipcMain.handle('calendar:isConnected', () => googleCalendar.isConnected());
   ipcMain.handle('calendar:connect', () => googleCalendar.connect());
   ipcMain.handle('calendar:disconnect', () => googleCalendar.disconnect());

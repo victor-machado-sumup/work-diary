@@ -23,23 +23,6 @@ interface ActivityItem {
   content?: string;
 }
 
-const MOCK_ACTIVITY: ActivityItem[] = [
-  {
-    id: '3',
-    source: 'slack',
-    time: '11:40',
-    summary: 'Replied in #payments-incident',
-    url: 'https://acme.slack.com/archives/C1/p1',
-  },
-  {
-    id: '7',
-    source: 'slack',
-    time: '16:20',
-    summary: 'Thread in #eng-backend about rate limits',
-    url: 'https://acme.slack.com/archives/C2/p2',
-  },
-];
-
 const SOURCES: Record<
   Source,
   { label: string; Icon: ComponentType<{ className?: string }>; color: string }
@@ -89,6 +72,44 @@ function useGithubActivity() {
         activity.map((a) => ({
           id: `github-${a.id}`,
           source: 'github' as const,
+          time: new Date(a.time).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+          summary: a.summary,
+          url: a.url,
+          content: a.content,
+        })),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { items, busy, error, load };
+}
+
+function useSlackActivity() {
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const activity = await window.slack.getTodayActivity();
+      setItems(
+        activity.map((a) => ({
+          id: `slack-${a.id}`,
+          source: 'slack' as const,
           time: new Date(a.time).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -182,7 +203,8 @@ function useCalendarActivity() {
 export function ActivitySidebar({ className }: { className?: string }) {
   const calendar = useCalendarActivity();
   const github = useGithubActivity();
-  const activity = [...calendar.items, ...github.items, ...MOCK_ACTIVITY].sort(
+  const slack = useSlackActivity();
+  const activity = [...calendar.items, ...github.items, ...slack.items].sort(
     (a, b) =>
       a.time === 'All day'
         ? -1
@@ -232,6 +254,18 @@ export function ActivitySidebar({ className }: { className?: string }) {
         {github.error && (
           <p className="break-words text-red-400">{github.error}</p>
         )}
+        <div className="flex gap-2 text-muted-foreground">
+          <button
+            className="underline disabled:opacity-50"
+            disabled={slack.busy}
+            onClick={slack.load}
+          >
+            Refresh Slack
+          </button>
+        </div>
+        {slack.error && (
+          <p className="break-words text-red-400">{slack.error}</p>
+        )}
       </div>
       <ul className="flex flex-col gap-1.5">
         {activity.map((item) => {
@@ -242,10 +276,7 @@ export function ActivitySidebar({ className }: { className?: string }) {
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.effectAllowed = 'copy';
-                e.dataTransfer.setData(
-                  'text/plain',
-                  toMarkdown(item, label),
-                );
+                e.dataTransfer.setData('text/plain', toMarkdown(item, label));
               }}
               className="flex cursor-grab items-start gap-2 rounded-md border bg-card p-2 text-sm active:cursor-grabbing"
             >

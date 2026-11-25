@@ -2,12 +2,17 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 import { contextBridge, ipcRenderer } from 'electron';
 
-import type { CalendarApi, GithubApi } from './shared/types';
+import type { CalendarApi, GithubApi, SlackApi } from './shared/types';
 
 const github: GithubApi = {
   getTodayActivity: () => ipcRenderer.invoke('github:getTodayActivity'),
 };
 contextBridge.exposeInMainWorld('github', github);
+
+const slack: SlackApi = {
+  getTodayActivity: () => ipcRenderer.invoke('slack:getTodayActivity'),
+};
+contextBridge.exposeInMainWorld('slack', slack);
 
 const calendar: CalendarApi = {
   isConnected: () => ipcRenderer.invoke('calendar:isConnected'),
