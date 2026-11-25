@@ -11,9 +11,9 @@ import type { ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import '../shared/types';
 
-type Source = 'github' | 'calendar' | 'slack' | 'vscode';
+export type Source = 'github' | 'calendar' | 'slack' | 'vscode';
 
-interface ActivityItem {
+export interface ActivityItem {
   id: string;
   source: Source;
   time: string;
@@ -24,7 +24,7 @@ interface ActivityItem {
   content?: string;
 }
 
-const SOURCES: Record<
+export const SOURCES: Record<
   Source,
   { label: string; Icon: ComponentType<{ className?: string }>; color: string }
 > = {
@@ -64,6 +64,7 @@ function toMarkdown(item: ActivityItem, label: string): string {
 function useGithubActivity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -89,6 +90,7 @@ function useGithubActivity() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -96,12 +98,13 @@ function useGithubActivity() {
     void load();
   }, [load]);
 
-  return { items, busy, error, load };
+  return { items, busy, loaded, error, load };
 }
 
 function useSlackActivity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -127,6 +130,7 @@ function useSlackActivity() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -134,12 +138,13 @@ function useSlackActivity() {
     void load();
   }, [load]);
 
-  return { items, busy, error, load };
+  return { items, busy, loaded, error, load };
 }
 
 function useVscodeActivity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -165,6 +170,7 @@ function useVscodeActivity() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -172,13 +178,14 @@ function useVscodeActivity() {
     void load();
   }, [load]);
 
-  return { items, busy, error, load };
+  return { items, busy, loaded, error, load };
 }
 
 function useCalendarActivity() {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -212,6 +219,7 @@ function useCalendarActivity() {
       setConnected(await window.calendar.isConnected().catch(() => false));
     } finally {
       setBusy(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -238,15 +246,24 @@ function useCalendarActivity() {
     void load();
   }, [load]);
 
-  return { connected, items, busy, error, load, connect, disconnect };
+  return {
+    connected,
+    items,
+    busy,
+    loaded,
+    error,
+    load,
+    connect,
+    disconnect,
+  };
 }
 
-export function ActivitySidebar({ className }: { className?: string }) {
+export function useActivitySources() {
   const calendar = useCalendarActivity();
   const github = useGithubActivity();
   const slack = useSlackActivity();
   const vscode = useVscodeActivity();
-  const activity = [
+  const items = [
     ...calendar.items,
     ...github.items,
     ...slack.items,
@@ -258,6 +275,36 @@ export function ActivitySidebar({ className }: { className?: string }) {
         ? 1
         : a.time.localeCompare(b.time),
   );
+  /** True once every source has finished its first pull (successfully or not). */
+  const allLoaded =
+    calendar.loaded && github.loaded && slack.loaded && vscode.loaded;
+  return { calendar, github, slack, vscode, items, allLoaded };
+}
+
+export type ActivitySources = ReturnType<typeof useActivitySources>;
+
+/** Plain-text context for the AI: every item with its summary, link and full content. */
+export function buildActivityContext(items: ActivityItem[]): string {
+  if (items.length === 0) return '(No activity was recorded today.)';
+  return items
+    .map((item) => {
+      let text = `### ${item.time} [${SOURCES[item.source].label}] ${item.summary}\n`;
+      if (item.url) text += `URL: ${item.url}\n`;
+      const content = item.content?.trim();
+      if (content) text += `\n${content}\n`;
+      return text;
+    })
+    .join('\n');
+}
+
+export function ActivitySidebar({
+  className,
+  sources,
+}: {
+  className?: string;
+  sources: ActivitySources;
+}) {
+  const { calendar, github, slack, vscode, items: activity } = sources;
 
   return (
     <aside className={className}>

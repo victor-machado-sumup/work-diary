@@ -18,6 +18,8 @@ self.MonacoEnvironment = {
 export interface MonacoEditorHandle {
   /** First line currently visible at the top of the viewport (1-based). */
   getTopLine: () => number;
+  /** Replaces the whole text. */
+  setValue: (value: string) => void;
 }
 
 interface MonacoEditorProps {
@@ -29,6 +31,8 @@ interface MonacoEditorProps {
   /** Hides the editor (keeping it mounted) and restores scroll/cursor on show. */
   hidden?: boolean;
   handleRef?: Ref<MonacoEditorHandle>;
+  /** Blocks typing and dropping. */
+  disabled?: boolean;
 }
 
 export function MonacoEditor({
@@ -38,6 +42,7 @@ export function MonacoEditor({
   className,
   hidden = false,
   handleRef,
+  disabled = false,
 }: MonacoEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -48,7 +53,14 @@ export function MonacoEditor({
   useImperativeHandle(handleRef, () => ({
     getTopLine: () =>
       editorRef.current?.getVisibleRanges()[0]?.startLineNumber ?? 1,
+    setValue: (value) => editorRef.current?.setValue(value),
   }));
+
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
+  useEffect(() => {
+    editorRef.current?.updateOptions({ readOnly: disabled });
+  }, [disabled]);
 
   // Save view state (scroll, cursor, selection) before hiding; restore on show.
   useLayoutEffect(() => {
@@ -66,6 +78,7 @@ export function MonacoEditor({
   useEffect(() => {
     const editor = monaco.editor.create(containerRef.current!, {
       value: defaultValue,
+      readOnly: disabledRef.current,
       language,
       theme: 'vs-dark',
       quickSuggestions: false,
@@ -118,6 +131,10 @@ export function MonacoEditor({
       dropIndicator.clear();
       const text = e.dataTransfer?.getData('text/plain');
       if (!text) return;
+      if (disabledRef.current) {
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       const position =
         editor.getTargetAtClientPoint(e.clientX, e.clientY)?.position ??
@@ -175,7 +192,10 @@ export function MonacoEditor({
   return (
     <div
       ref={containerRef}
-      className={hidden ? `${className ?? ''} hidden` : className}
+      className={
+        (hidden ? `${className ?? ''} hidden` : className) +
+        (disabled ? ' opacity-60' : '')
+      }
     />
   );
 }

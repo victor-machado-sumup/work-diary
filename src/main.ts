@@ -1,8 +1,10 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, screen, shell } from 'electron';
 import started from 'electron-squirrel-startup';
 
+import * as copilot from './main/copilot';
 import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
+import * as notes from './main/notes';
 import * as slack from './main/slack';
 import * as vscode from './main/vscode';
 
@@ -20,9 +22,12 @@ const showOnTop =
 
 const createWindow = (): void => {
   // Create the browser window.
+  const { x, y, width, height } = screen.getPrimaryDisplay().workArea;
   const mainWindow = new BrowserWindow({
-    height: 600,
-    width: 800,
+    x,
+    y,
+    width,
+    height,
     alwaysOnTop: showOnTop,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
@@ -75,6 +80,23 @@ app.whenReady().then(() => {
   ipcMain.handle('calendar:getTodayEvents', () =>
     googleCalendar.getTodayEvents(),
   );
+
+  ipcMain.handle('copilot:isConnected', () => copilot.isConnected());
+  ipcMain.handle('copilot:connect', (event) => copilot.connect(event.sender));
+  ipcMain.handle('copilot:disconnect', () => copilot.disconnect());
+  ipcMain.handle('copilot:generateLog', (_event, context: string) =>
+    copilot.generateLog(context),
+  );
+  ipcMain.handle(
+    'copilot:reviseLog',
+    (_event, text: string, request: string, context: string) =>
+      copilot.reviseLog(text, request, context),
+  );
+
+  ipcMain.handle('notes:save', (_event, content: string) =>
+    notes.saveNotes(content),
+  );
+  ipcMain.handle('app:quit', () => app.quit());
 
   createWindow();
 

@@ -60,11 +60,41 @@ export interface VscodeApi {
   getTodayActivity: () => Promise<VscodeActivity[]>;
 }
 
+export interface CopilotDeviceCode {
+  userCode: string;
+  verificationUri: string;
+}
+
+export interface CopilotApi {
+  isConnected: () => Promise<boolean>;
+  /** Runs the GitHub device flow; resolves once the user approved it. */
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  /** Generates the initial log text from the activity context. */
+  generateLog: (activityContext: string) => Promise<string>;
+  /** Applies a change request to the current log text. */
+  reviseLog: (
+    text: string,
+    request: string,
+    activityContext: string,
+  ) => Promise<string>;
+  /** Returns an unsubscribe function. */
+  onDeviceCode: (callback: (info: CopilotDeviceCode) => void) => () => void;
+}
+
+export interface NotesApi {
+  /** Saves the notes to ~/.config/work-diary/YYYY-MM-DD.md; returns the path. */
+  save: (content: string) => Promise<string>;
+  quit: () => Promise<void>;
+}
+
 declare global {
   interface Window {
+    copilot: CopilotApi;
     vscode: VscodeApi;
     calendar: CalendarApi;
     github: GithubApi;
     slack: SlackApi;
+    notes: NotesApi;
   }
 }

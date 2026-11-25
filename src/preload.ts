@@ -4,7 +4,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 import type {
   CalendarApi,
+  CopilotApi,
+  CopilotDeviceCode,
   GithubApi,
+  NotesApi,
   SlackApi,
   VscodeApi,
 } from './shared/types';
@@ -32,3 +35,24 @@ const calendar: CalendarApi = {
 };
 
 contextBridge.exposeInMainWorld('calendar', calendar);
+
+const copilot: CopilotApi = {
+  isConnected: () => ipcRenderer.invoke('copilot:isConnected'),
+  connect: () => ipcRenderer.invoke('copilot:connect'),
+  disconnect: () => ipcRenderer.invoke('copilot:disconnect'),
+  generateLog: (context) => ipcRenderer.invoke('copilot:generateLog', context),
+  reviseLog: (text, request, context) =>
+    ipcRenderer.invoke('copilot:reviseLog', text, request, context),
+  onDeviceCode: (callback) => {
+    const listener = (_e: unknown, info: CopilotDeviceCode) => callback(info);
+    ipcRenderer.on('copilot:deviceCode', listener);
+    return () => ipcRenderer.removeListener('copilot:deviceCode', listener);
+  },
+};
+contextBridge.exposeInMainWorld('copilot', copilot);
+
+const notes: NotesApi = {
+  save: (content) => ipcRenderer.invoke('notes:save', content),
+  quit: () => ipcRenderer.invoke('app:quit'),
+};
+contextBridge.exposeInMainWorld('notes', notes);
