@@ -9,20 +9,25 @@ if (started) {
   app.quit();
 }
 
+// Set WORK_DIARY_SHOW_ON_TOP=false to disable the always-on-top behavior (default: true).
+const showOnTop = process.env.WORK_DIARY_SHOW_ON_TOP?.trim().toLowerCase() !== 'false';
+
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     height: 600,
     width: 800,
-    alwaysOnTop: true,
+    alwaysOnTop: showOnTop,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
 
-  // Stay above all other windows (including fullscreen apps on macOS).
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
-  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  if (showOnTop) {
+    // Stay above all other windows (including fullscreen apps on macOS).
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  }
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);

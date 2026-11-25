@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { MonacoEditor } from '@/components/monaco-editor';
 
 function App() {
   const [content, setContent] = useState('');
@@ -16,11 +16,10 @@ function App() {
 
   return (
     <div className="flex h-full flex-col gap-2 p-2">
-      <Textarea
-        className="min-h-0 flex-1 resize-none"
-        placeholder="Write something..."
+      <MonacoEditor
+        className="min-h-0 flex-1 overflow-hidden rounded-md border"
         value={content}
-        onChange={(e) => setContent(e.target.value)}
+        onChange={setContent}
       />
       <div className="flex justify-end">
         <Button onClick={() => setOpen(true)}>Save</Button>
