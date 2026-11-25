@@ -3,6 +3,7 @@ import {
   GitPullRequest,
   GripVertical,
   MessageSquare,
+  NotebookText,
   StickyNote,
   Ticket,
 } from 'lucide-react';
@@ -12,7 +13,13 @@ import type { ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import '../shared/types';
 
-export type Source = 'github' | 'calendar' | 'slack' | 'jira' | 'vscode';
+export type Source =
+  | 'github'
+  | 'calendar'
+  | 'slack'
+  | 'jira'
+  | 'vscode'
+  | 'notion';
 
 export interface ActivityItem {
   id: string;
@@ -34,6 +41,7 @@ export const SOURCES: Record<
   slack: { label: 'Slack', Icon: MessageSquare, color: 'text-green-400' },
   jira: { label: 'Jira', Icon: Ticket, color: 'text-blue-400' },
   vscode: { label: 'VSCode', Icon: StickyNote, color: 'text-sky-400' },
+  notion: { label: 'Notion', Icon: NotebookText, color: 'text-stone-300' },
 };
 
 /** Escapes characters that would break markdown link text. */
@@ -223,6 +231,82 @@ function useVscodeActivity() {
   return { items, busy, loaded, error, load };
 }
 
+function useNotionActivity() {
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const isConnected = await window.notion.isConnected();
+      setConnected(isConnected);
+      if (!isConnected) {
+        setItems([]);
+        return;
+      }
+      const activity = await window.notion.getTodayActivity();
+      setItems(
+        activity.map((a) => ({
+          id: `notion-${a.id}`,
+          source: 'notion' as const,
+          time: new Date(a.time).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+          summary: a.summary,
+          url: a.url,
+          content: a.content,
+        })),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setConnected(await window.notion.isConnected().catch(() => false));
+    } finally {
+      setBusy(false);
+      setLoaded(true);
+    }
+  }, []);
+
+  const connect = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await window.notion.connect();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+      return;
+    }
+    await load();
+  }, [load]);
+
+  const disconnect = useCallback(async () => {
+    await window.notion.disconnect();
+    setConnected(false);
+    setItems([]);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return {
+    connected,
+    items,
+    busy,
+    loaded,
+    error,
+    load,
+    connect,
+    disconnect,
+  };
+}
+
 function useCalendarActivity() {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [items, setItems] = useState<ActivityItem[]>([]);
@@ -306,12 +390,14 @@ export function useActivitySources() {
   const slack = useSlackActivity();
   const jira = useJiraActivity();
   const vscode = useVscodeActivity();
+  const notion = useNotionActivity();
   const items = [
     ...calendar.items,
     ...github.items,
     ...slack.items,
     ...jira.items,
     ...vscode.items,
+    ...notion.items,
   ].sort((a, b) =>
     a.time === 'All day'
       ? -1
@@ -325,8 +411,18 @@ export function useActivitySources() {
     github.loaded &&
     slack.loaded &&
     jira.loaded &&
-    vscode.loaded;
-  return { calendar, github, slack, jira, vscode, items, allLoaded };
+    vscode.loaded &&
+    notion.loaded;
+  return {
+    calendar,
+    github,
+    slack,
+    jira,
+    vscode,
+    notion,
+    items,
+    allLoaded,
+  };
 }
 
 export type ActivitySources = ReturnType<typeof useActivitySources>;
@@ -352,7 +448,15 @@ export function ActivitySidebar({
   className?: string;
   sources: ActivitySources;
 }) {
-  const { calendar, github, slack, jira, vscode, items: activity } = sources;
+  const {
+    calendar,
+    github,
+    slack,
+    jira,
+    vscode,
+    notion,
+    items: activity,
+  } = sources;
 
   return (
     <aside className={className}>
@@ -428,6 +532,28 @@ export function ActivitySidebar({
         </div>
         {vscode.error && (
           <p className="break-words text-red-400">{vscode.error}</p>
+        )}
+        {notion.connected === false && (
+          <Button size="sm" disabled={notion.busy} onClick={notion.connect}>
+            Connect Notion
+          </Button>
+        )}
+        {notion.connected && (
+          <div className="flex gap-2 text-muted-foreground">
+            <button
+              className="underline disabled:opacity-50"
+              disabled={notion.busy}
+              onClick={notion.load}
+            >
+              Refresh Notion
+            </button>
+            <button className="underline" onClick={notion.disconnect}>
+              Disconnect
+            </button>
+          </div>
+        )}
+        {notion.error && (
+          <p className="break-words text-red-400">{notion.error}</p>
         )}
       </div>
       <ul className="flex flex-col gap-1.5">

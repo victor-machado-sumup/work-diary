@@ -75,6 +75,26 @@ export interface VscodeApi {
   getTodayActivity: () => Promise<VscodeActivity[]>;
 }
 
+export interface NotionActivity {
+  id: string;
+  kind: 'created' | 'edited' | 'comment';
+  /** ISO date-time of my latest change (or the comment time). */
+  time: string;
+  /** "Created|Edited <title>" or "Comment on <title>". */
+  summary: string;
+  url: string;
+  /** Blocks I touched in page order, or the comment with its highlighted context. */
+  content?: string;
+}
+
+export interface NotionApi {
+  isConnected: () => Promise<boolean>;
+  /** Opens the browser for the Notion MCP OAuth consent. */
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  getTodayActivity: () => Promise<NotionActivity[]>;
+}
+
 export interface CopilotDeviceCode {
   userCode: string;
   verificationUri: string;
@@ -148,6 +168,7 @@ declare global {
     github: GithubApi;
     slack: SlackApi;
     jira: JiraApi;
+    notion: NotionApi;
     notes: NotesApi;
     secrets: SecretsApi;
     settings: SettingsApi;

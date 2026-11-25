@@ -9,6 +9,7 @@ import type {
   GithubApi,
   JiraApi,
   NotesApi,
+  NotionApi,
   SecretsApi,
   SettingsApi,
   SlackApi,
@@ -29,6 +30,14 @@ const jira: JiraApi = {
   getTodayActivity: () => ipcRenderer.invoke('jira:getTodayActivity'),
 };
 contextBridge.exposeInMainWorld('jira', jira);
+
+const notion: NotionApi = {
+  isConnected: () => ipcRenderer.invoke('notion:isConnected'),
+  connect: () => ipcRenderer.invoke('notion:connect'),
+  disconnect: () => ipcRenderer.invoke('notion:disconnect'),
+  getTodayActivity: () => ipcRenderer.invoke('notion:getTodayActivity'),
+};
+contextBridge.exposeInMainWorld('notion', notion);
 
 const vscode: VscodeApi = {
   getTodayActivity: () => ipcRenderer.invoke('vscode:getTodayActivity'),

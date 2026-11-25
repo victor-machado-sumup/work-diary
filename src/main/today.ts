@@ -2,7 +2,7 @@
  * TEMPORARY: number of days to shift "today" by (-1 = yesterday).
  * Set to 0 to go back to the real current day.
  */
-const FAKE_TODAY_OFFSET_DAYS = -2; // 18 Thu
+const FAKE_TODAY_OFFSET_DAYS = 0; // 18 Thu
 
 /** Local-time [start, end) range of the (possibly faked) "today". */
 export function getTodayRange(): { start: Date; end: Date } {

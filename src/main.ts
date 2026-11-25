@@ -7,6 +7,8 @@ import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
 import * as jira from './main/jira';
 import * as notes from './main/notes';
+import * as notion from './main/notion';
+import * as notionMcp from './main/notion-mcp';
 import * as secrets from './main/secrets';
 import * as settings from './main/settings';
 import * as slack from './main/slack';
@@ -86,6 +88,10 @@ app.whenReady().then(() => {
     false ? slack.getTodayActivity() : [],
   );
   ipcMain.handle('jira:getTodayActivity', () => jira.getTodayActivity());
+  ipcMain.handle('notion:isConnected', () => notionMcp.isConnected());
+  ipcMain.handle('notion:connect', () => notionMcp.connect());
+  ipcMain.handle('notion:disconnect', () => notionMcp.disconnect());
+  ipcMain.handle('notion:getTodayActivity', () => notion.getTodayActivity());
   ipcMain.handle('vscode:getTodayActivity', () => vscode.getTodayActivity());
   ipcMain.handle('calendar:isConnected', () => googleCalendar.isConnected());
   ipcMain.handle('calendar:connect', () => googleCalendar.connect());
@@ -106,9 +112,12 @@ app.whenReady().then(() => {
       copilot.reviseLog(text, request, context),
   );
 
-  ipcMain.handle('notes:save', (_event, content: string) =>
-    notes.saveNotes(content),
-  );
+  ipcMain.handle('notes:save', async (_event, content: string) => {
+    const saved = await notes.saveNotes(content);
+    // Snapshot the VSCode untitled files only once the notes are saved.
+    await vscode.saveState();
+    return saved;
+  });
   ipcMain.handle('secrets:getStatus', () => secrets.getStatus());
   ipcMain.handle('secrets:set', (_event, values) => secrets.setSecrets(values));
   ipcMain.handle('settings:get', () => settings.getSettings());

@@ -204,33 +204,10 @@ export async function getTodayActivity(): Promise<JiraActivity[]> {
     return t >= start.getTime() && t < end.getTime();
   };
 
-  const log = (...args: unknown[]) => console.log('[jira]', ...args);
-  log('range', start.toISOString(), '→', end.toISOString(), 'me', me);
-  log('jql', jql);
-  log(
-    `${issues.length} candidate issues:`,
-    issues.map((i) => i.key).join(', '),
-  );
-
   const out: JiraActivity[] = [];
   for (const issue of issues) {
     const createdToday =
       issue.fields.creator?.accountId === me && inToday(issue.fields.created);
-    log(`--- ${issue.key}`, {
-      created: issue.fields.created,
-      creator: issue.fields.creator?.accountId,
-      assignee: issue.fields.assignee?.accountId ?? null,
-      createdToday,
-      histories: (issue.changelog?.histories ?? []).map((h) => ({
-        created: h.created,
-        author: h.author?.accountId,
-        byMe: h.author?.accountId === me,
-        today: inToday(h.created),
-        items: h.items.map(
-          (i) => `${i.field}: ${i.fromString ?? ''} → ${i.toString ?? ''}`,
-        ),
-      })),
-    });
     const isAssignee = issue.fields.assignee?.accountId === me;
     // The Done transition counts whoever made it, as long as I'm the assignee.
     const todayHistories = (issue.changelog?.histories ?? []).filter((h) =>
@@ -257,11 +234,6 @@ export async function getTodayActivity(): Promise<JiraActivity[]> {
             : h.items.filter((i) => i.field === 'description'),
       }))
       .filter((h) => h.items.length > 0);
-    log(`${issue.key} decision`, {
-      isAssignee,
-      doneEntry: doneEntry ? doneEntry.created : null,
-      keptChanges: mine.map((h) => h.items.map((i) => i.field)),
-    });
     if (!createdToday && !doneEntry && mine.length === 0) continue;
 
     const kind = doneEntry ? 'done' : createdToday ? 'created' : 'edited';
