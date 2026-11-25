@@ -45,6 +45,21 @@ export interface SlackApi {
   getTodayActivity: () => Promise<SlackActivity[]>;
 }
 
+export interface JiraActivity {
+  id: string;
+  kind: 'created' | 'edited' | 'done';
+  /** ISO date-time of my latest change to the issue today. */
+  time: string;
+  summary: string;
+  url: string;
+  /** My changes to the issue today, as markdown. */
+  content?: string;
+}
+
+export interface JiraApi {
+  getTodayActivity: () => Promise<JiraActivity[]>;
+}
+
 export interface VscodeActivity {
   id: string;
   /** ISO date-time of the last update of the unsaved file. */
@@ -86,7 +101,8 @@ export type SecretKey =
   | 'WORK_DIARY_GOOGLE_CLIENT_ID'
   | 'WORK_DIARY_GOOGLE_CLIENT_SECRET'
   | 'WORK_DIARY_GITHUB_TOKEN'
-  | 'WORK_DIARY_SLACK_TOKEN';
+  | 'WORK_DIARY_SLACK_TOKEN'
+  | 'WORK_DIARY_JIRA_TOKEN';
 
 /** Where each secret currently comes from. Values are never sent to the renderer. */
 export type SecretsStatus = Record<SecretKey, 'env' | 'saved' | 'missing'>;
@@ -100,7 +116,11 @@ export interface SecretsApi {
 export type SettingKey =
   | 'WORK_DIARY_COPILOT_MODEL'
   | 'WORK_DIARY_SHOW_ON_TOP'
-  | 'WORK_DIARY_SLACK_LOOKBACK_DAYS';
+  | 'WORK_DIARY_AUTO_GENERATE'
+  | 'WORK_DIARY_SLACK_LOOKBACK_DAYS'
+  | 'WORK_DIARY_JIRA_URL'
+  | 'WORK_DIARY_JIRA_EMAIL'
+  | 'WORK_DIARY_JIRA_PROJECT';
 
 /** Effective value of each setting and where it comes from. */
 export type SettingsState = Record<
@@ -127,6 +147,7 @@ declare global {
     calendar: CalendarApi;
     github: GithubApi;
     slack: SlackApi;
+    jira: JiraApi;
     notes: NotesApi;
     secrets: SecretsApi;
     settings: SettingsApi;

@@ -9,6 +9,7 @@ export const SECRET_KEYS: SecretKey[] = [
   'WORK_DIARY_GOOGLE_CLIENT_SECRET',
   'WORK_DIARY_GITHUB_TOKEN',
   'WORK_DIARY_SLACK_TOKEN',
+  'WORK_DIARY_JIRA_TOKEN',
 ];
 
 type Stored = Partial<Record<SecretKey, string>>;

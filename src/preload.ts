@@ -7,6 +7,7 @@ import type {
   CopilotApi,
   CopilotDeviceCode,
   GithubApi,
+  JiraApi,
   NotesApi,
   SecretsApi,
   SettingsApi,
@@ -23,6 +24,11 @@ const slack: SlackApi = {
   getTodayActivity: () => ipcRenderer.invoke('slack:getTodayActivity'),
 };
 contextBridge.exposeInMainWorld('slack', slack);
+
+const jira: JiraApi = {
+  getTodayActivity: () => ipcRenderer.invoke('jira:getTodayActivity'),
+};
+contextBridge.exposeInMainWorld('jira', jira);
 
 const vscode: VscodeApi = {
   getTodayActivity: () => ipcRenderer.invoke('vscode:getTodayActivity'),

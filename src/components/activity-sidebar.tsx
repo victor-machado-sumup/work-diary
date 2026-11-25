@@ -4,6 +4,7 @@ import {
   GripVertical,
   MessageSquare,
   StickyNote,
+  Ticket,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
@@ -11,7 +12,7 @@ import type { ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import '../shared/types';
 
-export type Source = 'github' | 'calendar' | 'slack' | 'vscode';
+export type Source = 'github' | 'calendar' | 'slack' | 'jira' | 'vscode';
 
 export interface ActivityItem {
   id: string;
@@ -31,6 +32,7 @@ export const SOURCES: Record<
   github: { label: 'GitHub', Icon: GitPullRequest, color: 'text-purple-400' },
   calendar: { label: 'Calendar', Icon: Calendar, color: 'text-yellow-400' },
   slack: { label: 'Slack', Icon: MessageSquare, color: 'text-green-400' },
+  jira: { label: 'Jira', Icon: Ticket, color: 'text-blue-400' },
   vscode: { label: 'VSCode', Icon: StickyNote, color: 'text-sky-400' },
 };
 
@@ -116,6 +118,46 @@ function useSlackActivity() {
         activity.map((a) => ({
           id: `slack-${a.id}`,
           source: 'slack' as const,
+          time: new Date(a.time).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+          summary: a.summary,
+          url: a.url,
+          content: a.content,
+        })),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+      setLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { items, busy, loaded, error, load };
+}
+
+function useJiraActivity() {
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const activity = await window.jira.getTodayActivity();
+      setItems(
+        activity.map((a) => ({
+          id: `jira-${a.id}`,
+          source: 'jira' as const,
           time: new Date(a.time).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -262,11 +304,13 @@ export function useActivitySources() {
   const calendar = useCalendarActivity();
   const github = useGithubActivity();
   const slack = useSlackActivity();
+  const jira = useJiraActivity();
   const vscode = useVscodeActivity();
   const items = [
     ...calendar.items,
     ...github.items,
     ...slack.items,
+    ...jira.items,
     ...vscode.items,
   ].sort((a, b) =>
     a.time === 'All day'
@@ -277,8 +321,12 @@ export function useActivitySources() {
   );
   /** True once every source has finished its first pull (successfully or not). */
   const allLoaded =
-    calendar.loaded && github.loaded && slack.loaded && vscode.loaded;
-  return { calendar, github, slack, vscode, items, allLoaded };
+    calendar.loaded &&
+    github.loaded &&
+    slack.loaded &&
+    jira.loaded &&
+    vscode.loaded;
+  return { calendar, github, slack, jira, vscode, items, allLoaded };
 }
 
 export type ActivitySources = ReturnType<typeof useActivitySources>;
@@ -304,7 +352,7 @@ export function ActivitySidebar({
   className?: string;
   sources: ActivitySources;
 }) {
-  const { calendar, github, slack, vscode, items: activity } = sources;
+  const { calendar, github, slack, jira, vscode, items: activity } = sources;
 
   return (
     <aside className={className}>
@@ -359,6 +407,16 @@ export function ActivitySidebar({
         {slack.error && (
           <p className="break-words text-red-400">{slack.error}</p>
         )}
+        <div className="flex gap-2 text-muted-foreground">
+          <button
+            className="underline disabled:opacity-50"
+            disabled={jira.busy}
+            onClick={jira.load}
+          >
+            Refresh Jira
+          </button>
+        </div>
+        {jira.error && <p className="break-words text-red-400">{jira.error}</p>}
         <div className="flex gap-2 text-muted-foreground">
           <button
             className="underline disabled:opacity-50"

@@ -7,7 +7,11 @@ import type { SettingKey, SettingsState } from '../shared/types';
 export const SETTING_DEFAULTS: Record<SettingKey, string> = {
   WORK_DIARY_COPILOT_MODEL: 'gpt-4.1',
   WORK_DIARY_SHOW_ON_TOP: 'true',
+  WORK_DIARY_AUTO_GENERATE: 'false',
   WORK_DIARY_SLACK_LOOKBACK_DAYS: '7',
+  WORK_DIARY_JIRA_URL: '',
+  WORK_DIARY_JIRA_EMAIL: '',
+  WORK_DIARY_JIRA_PROJECT: '',
 };
 
 type Stored = Partial<Record<SettingKey, string>>;

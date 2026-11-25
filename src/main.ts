@@ -5,6 +5,7 @@ import started from 'electron-squirrel-startup';
 import * as copilot from './main/copilot';
 import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
+import * as jira from './main/jira';
 import * as notes from './main/notes';
 import * as secrets from './main/secrets';
 import * as settings from './main/settings';
@@ -84,6 +85,7 @@ app.whenReady().then(() => {
   ipcMain.handle('slack:getTodayActivity', () =>
     false ? slack.getTodayActivity() : [],
   );
+  ipcMain.handle('jira:getTodayActivity', () => jira.getTodayActivity());
   ipcMain.handle('vscode:getTodayActivity', () => vscode.getTodayActivity());
   ipcMain.handle('calendar:isConnected', () => googleCalendar.isConnected());
   ipcMain.handle('calendar:connect', () => googleCalendar.connect());
