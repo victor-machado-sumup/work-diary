@@ -4,6 +4,7 @@ import started from 'electron-squirrel-startup';
 import * as github from './main/github';
 import * as googleCalendar from './main/google-calendar';
 import * as slack from './main/slack';
+import * as vscode from './main/vscode';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -67,6 +68,7 @@ app.whenReady().then(() => {
   ipcMain.handle('slack:getTodayActivity', () =>
     false ? slack.getTodayActivity() : [],
   );
+  ipcMain.handle('vscode:getTodayActivity', () => vscode.getTodayActivity());
   ipcMain.handle('calendar:isConnected', () => googleCalendar.isConnected());
   ipcMain.handle('calendar:connect', () => googleCalendar.connect());
   ipcMain.handle('calendar:disconnect', () => googleCalendar.disconnect());

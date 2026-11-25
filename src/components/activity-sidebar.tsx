@@ -3,6 +3,7 @@ import {
   GitPullRequest,
   GripVertical,
   MessageSquare,
+  StickyNote,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
@@ -10,7 +11,7 @@ import type { ComponentType } from 'react';
 import { Button } from '@/components/ui/button';
 import '../shared/types';
 
-type Source = 'github' | 'calendar' | 'slack';
+type Source = 'github' | 'calendar' | 'slack' | 'vscode';
 
 interface ActivityItem {
   id: string;
@@ -28,8 +29,9 @@ const SOURCES: Record<
   { label: string; Icon: ComponentType<{ className?: string }>; color: string }
 > = {
   github: { label: 'GitHub', Icon: GitPullRequest, color: 'text-purple-400' },
-  calendar: { label: 'Calendar', Icon: Calendar, color: 'text-blue-400' },
+  calendar: { label: 'Calendar', Icon: Calendar, color: 'text-yellow-400' },
   slack: { label: 'Slack', Icon: MessageSquare, color: 'text-green-400' },
+  vscode: { label: 'VSCode', Icon: StickyNote, color: 'text-sky-400' },
 };
 
 /** Escapes characters that would break markdown link text. */
@@ -45,8 +47,9 @@ function escapeMarkdown(text: string): string {
  * the full content (if any) as an indented blockquote under the list item.
  */
 function toMarkdown(item: ActivityItem, label: string): string {
+  const summary = escapeMarkdown(item.summary);
   const url = item.url.replace(/[()]/g, encodeURIComponent);
-  let md = `- ${item.time} [${label}] [${escapeMarkdown(item.summary)}](${url})\n`;
+  let md = `- ${item.time} [${label}] ${url ? `[${summary}](${url})` : summary}\n`;
   const content = item.content?.trim();
   if (content) {
     md += content
@@ -110,6 +113,44 @@ function useSlackActivity() {
         activity.map((a) => ({
           id: `slack-${a.id}`,
           source: 'slack' as const,
+          time: new Date(a.time).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+          summary: a.summary,
+          url: a.url,
+          content: a.content,
+        })),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { items, busy, error, load };
+}
+
+function useVscodeActivity() {
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const activity = await window.vscode.getTodayActivity();
+      setItems(
+        activity.map((a) => ({
+          id: `vscode-${a.id}`,
+          source: 'vscode' as const,
           time: new Date(a.time).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -204,13 +245,18 @@ export function ActivitySidebar({ className }: { className?: string }) {
   const calendar = useCalendarActivity();
   const github = useGithubActivity();
   const slack = useSlackActivity();
-  const activity = [...calendar.items, ...github.items, ...slack.items].sort(
-    (a, b) =>
-      a.time === 'All day'
-        ? -1
-        : b.time === 'All day'
-          ? 1
-          : a.time.localeCompare(b.time),
+  const vscode = useVscodeActivity();
+  const activity = [
+    ...calendar.items,
+    ...github.items,
+    ...slack.items,
+    ...vscode.items,
+  ].sort((a, b) =>
+    a.time === 'All day'
+      ? -1
+      : b.time === 'All day'
+        ? 1
+        : a.time.localeCompare(b.time),
   );
 
   return (
@@ -265,6 +311,18 @@ export function ActivitySidebar({ className }: { className?: string }) {
         </div>
         {slack.error && (
           <p className="break-words text-red-400">{slack.error}</p>
+        )}
+        <div className="flex gap-2 text-muted-foreground">
+          <button
+            className="underline disabled:opacity-50"
+            disabled={vscode.busy}
+            onClick={vscode.load}
+          >
+            Refresh VSCode
+          </button>
+        </div>
+        {vscode.error && (
+          <p className="break-words text-red-400">{vscode.error}</p>
         )}
       </div>
       <ul className="flex flex-col gap-1.5">

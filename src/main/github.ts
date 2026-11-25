@@ -110,9 +110,7 @@ export async function getTodayActivity(): Promise<GithubActivity[]> {
   const startMs = start.getTime();
   const endMs = end.getTime();
   // Search date qualifiers are day-granular (UTC); go back a day and filter precisely below.
-  const since = new Date(startMs - 24 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const since = new Date(startMs - 24 * 3600 * 1000).toISOString().slice(0, 10);
 
   const res = await fetch(GRAPHQL_URL, {
     method: 'POST',

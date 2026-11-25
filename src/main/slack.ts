@@ -68,7 +68,7 @@ async function pool<T, R>(
   items: T[],
   fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
-  const results: R[] = new Array(items.length);
+  const results: R[] = Array.from({ length: items.length });
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
@@ -108,9 +108,7 @@ function userName(id: string): Promise<string> {
 /** Converts Slack mrkdwn tokens (mentions, links, entities) to plain markdown. */
 async function formatText(text: string): Promise<string> {
   let out = text;
-  const ids = [
-    ...new Set([...out.matchAll(/<@([UW][A-Z0-9]+)(?:\|[^>]*)?>/g)]),
-  ];
+  const ids = [...new Set(out.matchAll(/<@([UW][A-Z0-9]+)(?:\|[^>]*)?>/g))];
   const names = new Map<string, string>();
   await Promise.all(
     ids.map(async (m) => names.set(m[1], await userName(m[1]))),

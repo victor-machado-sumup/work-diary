@@ -45,8 +45,24 @@ export interface SlackApi {
   getTodayActivity: () => Promise<SlackActivity[]>;
 }
 
+export interface VscodeActivity {
+  id: string;
+  /** ISO date-time of the last update of the unsaved file. */
+  time: string;
+  summary: string;
+  /** Always empty: unsaved files have no link. */
+  url: string;
+  /** Full text of the unsaved file. */
+  content?: string;
+}
+
+export interface VscodeApi {
+  getTodayActivity: () => Promise<VscodeActivity[]>;
+}
+
 declare global {
   interface Window {
+    vscode: VscodeApi;
     calendar: CalendarApi;
     github: GithubApi;
     slack: SlackApi;

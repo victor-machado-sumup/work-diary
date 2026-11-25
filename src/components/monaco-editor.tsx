@@ -11,10 +11,7 @@ import * as monaco from 'monaco-editor';
 self.MonacoEnvironment = {
   getWorker: () =>
     new Worker(
-      new URL(
-        'monaco-editor/esm/vs/editor/editor.worker.js',
-        import.meta.url,
-      ),
+      new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url),
     ),
 };
 
