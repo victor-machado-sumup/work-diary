@@ -1,5 +1,7 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import started from 'electron-squirrel-startup';
+
+import * as googleCalendar from './main/google-calendar';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -20,6 +22,9 @@ const createWindow = (): void => {
     alwaysOnTop: showOnTop,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      // The dev-server HMR client bundled into the preload requires Node's
+      // "events" module, which is unavailable in a sandboxed preload.
+      sandbox: false,
     },
   });
 
@@ -32,14 +37,23 @@ const createWindow = (): void => {
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // Open the DevTools only when explicitly requested.
+  if (process.env.WORK_DIARY_DEVTOOLS?.trim().toLowerCase() === 'true') {
+    mainWindow.webContents.openDevTools();
+  }
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  ipcMain.handle('calendar:isConnected', () => googleCalendar.isConnected());
+  ipcMain.handle('calendar:connect', () => googleCalendar.connect());
+  ipcMain.handle('calendar:disconnect', () => googleCalendar.disconnect());
+  ipcMain.handle('calendar:getTodayEvents', () =>
+    googleCalendar.getTodayEvents(),
+  );
+
   createWindow();
 
   // On OS X it's common to re-create a window in the app when the
