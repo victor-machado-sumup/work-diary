@@ -1,7 +1,7 @@
 import {
   Calendar,
+  CircleX,
   GitPullRequest,
-  GripVertical,
   MessageSquare,
   NotebookText,
   StickyNote,
@@ -14,12 +14,7 @@ import { Button } from '@/components/ui/button';
 import '../shared/types';
 
 export type Source =
-  | 'github'
-  | 'calendar'
-  | 'slack'
-  | 'jira'
-  | 'vscode'
-  | 'notion';
+  'github' | 'calendar' | 'slack' | 'jira' | 'vscode' | 'notion';
 
 export interface ActivityItem {
   id: string;
@@ -28,7 +23,7 @@ export interface ActivityItem {
   /** Short one-line description. */
   summary: string;
   url: string;
-  /** Full text (e.g. comment bodies), inserted below the summary on drop. */
+  /** Full text (e.g. comment bodies), editable in the editor when the item is selected. */
   content?: string;
 }
 
@@ -39,37 +34,10 @@ export const SOURCES: Record<
   github: { label: 'GitHub', Icon: GitPullRequest, color: 'text-purple-400' },
   calendar: { label: 'Calendar', Icon: Calendar, color: 'text-yellow-400' },
   slack: { label: 'Slack', Icon: MessageSquare, color: 'text-green-400' },
-  jira: { label: 'Jira', Icon: Ticket, color: 'text-blue-400' },
+  jira: { label: 'Jira', Icon: Ticket, color: 'text-orange-400' },
   vscode: { label: 'VSCode', Icon: StickyNote, color: 'text-sky-400' },
   notion: { label: 'Notion', Icon: NotebookText, color: 'text-stone-300' },
 };
-
-/** Escapes characters that would break markdown link text. */
-function escapeMarkdown(text: string): string {
-  return text
-    .trim()
-    .replace(/[\\`*_{}[\]<>|]/g, '\\$&')
-    .replace(/\s+/g, ' ');
-}
-
-/**
- * Markdown inserted on drop: a summary line linking to the item, followed by
- * the full content (if any) as an indented blockquote under the list item.
- */
-function toMarkdown(item: ActivityItem, label: string): string {
-  const summary = escapeMarkdown(item.summary);
-  const url = item.url.replace(/[()]/g, encodeURIComponent);
-  let md = `- ${item.time} [${label}] ${url ? `[${summary}](${url})` : summary}\n`;
-  const content = item.content?.trim();
-  if (content) {
-    md += content
-      .split(/\r?\n/)
-      .map((line) => (line.trim() ? `  > ${line}` : '  >'))
-      .join('\n');
-    md += '\n';
-  }
-  return md;
-}
 
 function useGithubActivity() {
   const [items, setItems] = useState<ActivityItem[]>([]);
@@ -444,25 +412,31 @@ export function buildActivityContext(items: ActivityItem[]): string {
 export function ActivitySidebar({
   className,
   sources,
+  items: activity,
+  selectedId,
+  onSelect,
+  onRemove,
+  onShowNotes,
 }: {
   className?: string;
   sources: ActivitySources;
+  /** Items to list (sources' items minus the removed ones). */
+  items: ActivityItem[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onRemove: (id: string) => void;
+  onShowNotes: () => void;
 }) {
-  const {
-    calendar,
-    github,
-    slack,
-    jira,
-    vscode,
-    notion,
-    items: activity,
-  } = sources;
+  const { calendar, github, slack, jira, vscode, notion } = sources;
 
   return (
     <aside className={className}>
+      <Button size="sm" className="mb-3 w-full" onClick={onShowNotes}>
+        Show Notes
+      </Button>
       <h2 className="mb-2 px-1 text-sm font-semibold">Today's activity</h2>
       <p className="mb-3 px-1 text-xs text-muted-foreground">
-        Drag an item into the editor.
+        Select an item to edit its content.
       </p>
       <div className="mb-3 flex flex-col gap-1 px-1 text-xs">
         {calendar.connected === false && (
@@ -560,23 +534,33 @@ export function ActivitySidebar({
         {activity.map((item) => {
           const { Icon, color, label } = SOURCES[item.source];
           return (
-            <li
-              key={item.id}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = 'copy';
-                e.dataTransfer.setData('text/plain', toMarkdown(item, label));
-              }}
-              className="flex cursor-grab items-start gap-2 rounded-md border bg-card p-2 text-sm active:cursor-grabbing"
-            >
-              <GripVertical className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              <Icon className={`mt-0.5 size-4 shrink-0 ${color}`} />
-              <div className="min-w-0">
-                <div className="text-xs text-muted-foreground">
-                  {item.time} · {label}
+            <li key={item.id} className="relative">
+              <button
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className={`flex w-full cursor-pointer items-start gap-2 rounded-md border p-2 pr-8 text-left text-sm hover:bg-accent ${
+                  item.id === selectedId
+                    ? 'border-primary bg-accent'
+                    : 'bg-card'
+                }`}
+              >
+                <Icon className={`mt-0.5 size-4 shrink-0 ${color}`} />
+                <div className="min-w-0">
+                  <div className="text-xs text-muted-foreground">
+                    {item.time} · {label}
+                  </div>
+                  <div className="break-words">{item.summary}</div>
                 </div>
-                <div className="break-words">{item.summary}</div>
-              </div>
+              </button>
+              <button
+                type="button"
+                aria-label="Remove activity"
+                title="Double-click to remove"
+                onDoubleClick={() => onRemove(item.id)}
+                className="absolute top-1.5 right-1.5 rounded-full text-muted-foreground hover:text-red-400"
+              >
+                <CircleX className="size-4" />
+              </button>
             </li>
           );
         })}

@@ -31,7 +31,7 @@ interface MonacoEditorProps {
   /** Hides the editor (keeping it mounted) and restores scroll/cursor on show. */
   hidden?: boolean;
   handleRef?: Ref<MonacoEditorHandle>;
-  /** Blocks typing and dropping. */
+  /** Blocks typing. */
   disabled?: boolean;
 }
 
@@ -96,91 +96,11 @@ export function MonacoEditor({
     });
     editorRef.current = editor;
 
-    const container = containerRef.current!;
-    // Dotted drop indicator, reusing Monaco's own "dnd-target" style.
-    const dropIndicator = editor.createDecorationsCollection();
-    const onDragOver = (e: DragEvent) => {
-      e.preventDefault();
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-      const position = editor.getTargetAtClientPoint(
-        e.clientX,
-        e.clientY,
-      )?.position;
-      if (position) {
-        dropIndicator.set([
-          {
-            range: new monaco.Range(
-              position.lineNumber,
-              position.column,
-              position.lineNumber,
-              position.column,
-            ),
-            options: { className: 'dnd-target' },
-          },
-        ]);
-      }
-    };
-    const onDragLeave = (e: DragEvent) => {
-      // dragleave also fires when moving between child elements; only clear
-      // when the pointer actually leaves the editor.
-      if (!container.contains(e.relatedTarget as Node | null)) {
-        dropIndicator.clear();
-      }
-    };
-    const onDrop = (e: DragEvent) => {
-      dropIndicator.clear();
-      const text = e.dataTransfer?.getData('text/plain');
-      if (!text) return;
-      if (disabledRef.current) {
-        e.preventDefault();
-        return;
-      }
-      e.preventDefault();
-      const position =
-        editor.getTargetAtClientPoint(e.clientX, e.clientY)?.position ??
-        editor.getPosition();
-      if (!position) return;
-      editor.executeEdits(
-        'drop',
-        [
-          {
-            range: new monaco.Range(
-              position.lineNumber,
-              position.column,
-              position.lineNumber,
-              position.column,
-            ),
-            text,
-            forceMoveMarkers: true,
-          },
-        ],
-        // The inverse edit's range covers the inserted text; put the cursor at its end.
-        (inverseEdits) => {
-          const { endLineNumber, endColumn } = inverseEdits[0].range;
-          return [
-            new monaco.Selection(
-              endLineNumber,
-              endColumn,
-              endLineNumber,
-              endColumn,
-            ),
-          ];
-        },
-      );
-      editor.focus();
-    };
-    container.addEventListener('dragover', onDragOver);
-    container.addEventListener('dragleave', onDragLeave);
-    container.addEventListener('drop', onDrop);
-
     const subscription = editor.onDidChangeModelContent(() => {
       onChangeRef.current(editor.getValue());
     });
 
     return () => {
-      container.removeEventListener('dragover', onDragOver);
-      container.removeEventListener('dragleave', onDragLeave);
-      container.removeEventListener('drop', onDrop);
       subscription.dispose();
       editor.getModel()?.dispose();
       editor.dispose();

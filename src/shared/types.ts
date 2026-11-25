@@ -108,11 +108,7 @@ export interface CopilotApi {
   /** Generates the initial log text from the activity context. */
   generateLog: (activityContext: string) => Promise<string>;
   /** Applies a change request to the current log text. */
-  reviseLog: (
-    text: string,
-    request: string,
-    activityContext: string,
-  ) => Promise<string>;
+  reviseLog: (text: string, request: string) => Promise<string>;
   /** Returns an unsubscribe function. */
   onDeviceCode: (callback: (info: CopilotDeviceCode) => void) => () => void;
 }

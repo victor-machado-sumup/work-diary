@@ -106,10 +106,8 @@ app.whenReady().then(() => {
   ipcMain.handle('copilot:generateLog', (_event, context: string) =>
     copilot.generateLog(context),
   );
-  ipcMain.handle(
-    'copilot:reviseLog',
-    (_event, text: string, request: string, context: string) =>
-      copilot.reviseLog(text, request, context),
+  ipcMain.handle('copilot:reviseLog', (_event, text: string, request: string) =>
+    copilot.reviseLog(text, request),
   );
 
   ipcMain.handle('notes:save', async (_event, content: string) => {

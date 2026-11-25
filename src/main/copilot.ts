@@ -265,17 +265,16 @@ export function generateLog(activityContext: string): Promise<string> {
 export function reviseLog(
   currentText: string,
   request: string,
-  activityContext: string,
 ): Promise<string> {
   const system = `${buildSystemPrompt()}
 
 ## Revision
 
-You will receive a log you wrote earlier (possibly edited by the user), the
-day's activity, and a change request. Apply the request to the log and output
+You will receive a log you wrote earlier (possibly edited by the user) and a
+change request. Apply the request to the log and output
 the full revised log only, following all the rules above.`;
   return complete(
     system,
-    `Activity of the day:\n\n${activityContext}\n\nCurrent log:\n\n${currentText}\n\nChange request:\n\n${request}`,
+    `Current log:\n\n${currentText}\n\nChange request:\n\n${request}`,
   );
 }

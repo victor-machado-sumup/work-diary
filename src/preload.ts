@@ -58,8 +58,8 @@ const copilot: CopilotApi = {
   connect: () => ipcRenderer.invoke('copilot:connect'),
   disconnect: () => ipcRenderer.invoke('copilot:disconnect'),
   generateLog: (context) => ipcRenderer.invoke('copilot:generateLog', context),
-  reviseLog: (text, request, context) =>
-    ipcRenderer.invoke('copilot:reviseLog', text, request, context),
+  reviseLog: (text, request) =>
+    ipcRenderer.invoke('copilot:reviseLog', text, request),
   onDeviceCode: (callback) => {
     const listener = (_e: unknown, info: CopilotDeviceCode) => callback(info);
     ipcRenderer.on('copilot:deviceCode', listener);
